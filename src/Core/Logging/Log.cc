@@ -216,10 +216,9 @@ void Log::init()
 boost::filesystem::path Log::directory_(ApplicationHelper().configDirectory());
 
 boost::filesystem::path Log::logDirectory() { return directory_; }
-void Log::setLogDirectory(const boost::filesystem::path& dir) 
-{ 
-  directory_ = dir; 
-  //std::cout << "Log dir set to " << dir << std::endl;
+void Log::setLogDirectory(const boost::filesystem::path& dir)
+{
+  directory_ = dir;
 }
 
 Log& Log::get()
@@ -463,7 +462,7 @@ bool ApplicationHelper::get_user_name( std::string& user_name )
 
 }
 
-boost::filesystem::path ApplicationHelper::configDirectory() 
+boost::filesystem::path ApplicationHelper::configDirectory()
 {
   boost::filesystem::path config;
   if (!get_config_directory(config))
@@ -471,14 +470,16 @@ boost::filesystem::path ApplicationHelper::configDirectory()
   return config;
 }
 
-std::string ApplicationHelper::applicationName() 
+std::string ApplicationHelper::applicationName()
 {
   return "SCIRun";
 }
 
 ApplicationHelper::ApplicationHelper()
 {
+#if WIN32
   boost::filesystem::path::imbue( std::locale( "" ) );
+#endif
   boost::filesystem::path dummy("boost bug workaround");
   if (dummy.string().empty())
     std::cout << dummy.string() << std::endl;

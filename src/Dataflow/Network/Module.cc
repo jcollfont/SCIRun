@@ -28,6 +28,7 @@
 
 #include <iostream>
 #include <memory>
+#include <numeric>
 #include <boost/lexical_cast.hpp>
 #include <boost/bind.hpp>
 
@@ -63,7 +64,7 @@ Module::Module(const ModuleLookupInfo& info,
   const std::string& version)
   : info_(info),
   id_(info_.module_name_, instanceCount_++),
-  inputsChanged_(true),
+  inputsChanged_(false),
   has_ui_(hasUi),
   state_(stateFactory ? stateFactory->make_state(info.module_name_) : new NullModuleState),
   executionState_(ModuleInterface::NotExecuted)
@@ -240,12 +241,15 @@ DatatypeHandleOption Module::get_input_handle(const PortId& id)
     BOOST_THROW_EXCEPTION(InvalidInputPortRequestException() << Core::ErrorMessage("Input port " + id.toString() + " is dynamic, get_dynamic_input_handles must be called."));
   }
 
-  auto data = port->getData();
   {
-    LOG_DEBUG(id_ << " :: inputsChanged is " << inputsChanged_ << ", querying port for value.");
-    inputsChanged_ = inputsChanged_ || port->hasChanged();
-    LOG_DEBUG(id_ << ":: inputsChanged is now " << inputsChanged_);
+    Log::get() << DEBUG_LOG << id_ << " :: inputsChanged is " << inputsChanged_ << ", querying port for value." << std::endl;
+    // NOTE: don't use short-circuited boolean OR here, we need to call hasChanged each time since it updates the port's cache flag.
+    inputsChanged_ = port->hasChanged() || inputsChanged_;
+    Log::get() << DEBUG_LOG << id_ << ":: inputsChanged is now " << inputsChanged_ << std::endl;
   }
+
+  auto data = port->getData();
+
   return data;
 }
 
@@ -257,14 +261,22 @@ std::vector<DatatypeHandleOption> Module::get_dynamic_input_handles(const PortId
   {
     BOOST_THROW_EXCEPTION(InvalidInputPortRequestException() << Core::ErrorMessage("Input port " + id.toString() + " is static, get_input_handle must be called."));
   }
-  std::vector<DatatypeHandleOption> options;
-  auto getData = [](InputPortHandle input) { return input->getData(); };
-  std::transform(portsWithName.begin(), portsWithName.end(), std::back_inserter(options), getData);
+
   {
     LOG_DEBUG(id_ << " :: inputsChanged is " << inputsChanged_ << ", querying port for value.");
-    inputsChanged_ = inputsChanged_ || std::any_of(portsWithName.begin(), portsWithName.end(), [](InputPortHandle input) { return input->hasChanged(); });
+    // NOTE: don't use short-circuited boolean OR here, we need to call hasChanged each time since it updates the port's cache flag.
+    bool startingVal = inputsChanged_;
+    inputsChanged_ = std::accumulate(portsWithName.begin(), portsWithName.end(), startingVal, [](bool acc, InputPortHandle input) { return input->hasChanged() || acc; });
     LOG_DEBUG(id_ << ":: inputsChanged is now " << inputsChanged_);
   }
+
+  std::vector<DatatypeHandleOption> options;
+
+
+
+  auto getData = [](InputPortHandle input) { return input->getData(); };
+  std::transform(portsWithName.begin(), portsWithName.end(), std::back_inserter(options), getData);
+
   return options;
 }
 
@@ -491,7 +503,7 @@ void Module::setAlgoDoubleFromState(const AlgorithmParameterName& name)
 
 void Module::setAlgoOptionFromState(const AlgorithmParameterName& name)
 {
-  algo().set_option(name, get_state()->getValue(name).toString());
+	algo().set_option(name, get_state()->getValue(name).toString());
 }
 
 void Module::setStateStringFromAlgoOption(const AlgorithmParameterName& name)
@@ -522,7 +534,7 @@ bool Module::needToExecute() const
   if (reexecute_)
   {
     auto val = reexecute_->needToExecute();
-    LOG_DEBUG(id_ << " Using real needToExecute strategy object, value is: " << val << std::endl);
+    Log::get() << DEBUG_LOG << id_ << " Using real needToExecute strategy object, value is: " << val << std::endl;
     return val;
   }
 
@@ -594,7 +606,7 @@ InputsChangedCheckerImpl::InputsChangedCheckerImpl(const Module& module) : modul
 bool InputsChangedCheckerImpl::inputsChanged() const
 {
   auto ret = module_.inputsChanged();
-  LOG_DEBUG(module_.get_id() << " InputsChangedCheckerImpl returns " << ret);
+  Log::get() << DEBUG_LOG << module_.get_id() << " InputsChangedCheckerImpl returns " << ret << std::endl;
   return ret;
 }
 
@@ -605,7 +617,7 @@ StateChangedCheckerImpl::StateChangedCheckerImpl(const Module& module) : module_
 bool StateChangedCheckerImpl::newStatePresent() const
 {
   auto ret = module_.newStatePresent();
-  LOG_DEBUG(module_.get_id() << " StateChangedCheckerImpl returns " << ret);
+  Log::get() << DEBUG_LOG << module_.get_id() << " StateChangedCheckerImpl returns " << ret << std::endl;
   return ret;
 }
 
@@ -615,10 +627,14 @@ OutputPortsCachedCheckerImpl::OutputPortsCachedCheckerImpl(const Module& module)
 
 bool OutputPortsCachedCheckerImpl::outputPortsCached() const
 {
+  return true;
+  //TODO: need a way to filter optional input ports
+  /*
   auto outputs = module_.outputPorts();
-  auto ret = std::all_of(outputs.begin(), outputs.end(), [](OutputPortHandle out) { return out->hasData(); });
-  LOG_DEBUG(module_.get_id() << " OutputPortsCachedCheckerImpl, returns " << ret);
+  auto ret = std::all_of(outputs.begin(), outputs.end(), [](OutputPortHandle out) { return out-> out->hasData(); });
+  Log::get() << DEBUG_LOG << module_.get_id() << " OutputPortsCachedCheckerImpl, returns " << ret << std::endl;
   return ret;
+  */
 }
 
 DynamicReexecutionStrategyFactory::DynamicReexecutionStrategyFactory(const boost::optional<std::string>& reexMode)
@@ -677,6 +693,6 @@ bool SCIRun::Dataflow::Networks::canReplaceWith(ModuleHandle module, const Modul
       }
     }
   }
-  LOG_DEBUG("\tFound replacement: " << potentialReplacement.lookupInfo_.module_name_ << std::endl);
+  //LOG_DEBUG("\tFound replacement: " << potentialReplacement.lookupInfo_.module_name_ << std::endl);
   return true;
 }
