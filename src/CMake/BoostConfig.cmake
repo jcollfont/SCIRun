@@ -68,7 +68,7 @@ MACRO(EXTERNAL_BOOST_LIBRARY compress_type)
       #       library fix is verified.
       SET(boost_GIT_TAG "origin/boost_1_54")
     ELSE()
-      SET(boost_GIT_TAG "origin/boost_1_56_test")
+      SET(boost_GIT_TAG "origin/boost_1_57_test")
     ENDIF()
 
     # TODO: fix install step
