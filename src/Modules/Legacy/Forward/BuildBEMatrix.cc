@@ -41,8 +41,6 @@
  *
  */
 
-//#include <Core/Algorithms/Math/LinearSystem/SolveLinearSystem.h>
-
 #include <Modules/Legacy/Forward/BuildBEMatrix.h>
 #include <Modules/Legacy/Forward/BuildBEMatrixImpl.h>
 #include <Core/Algorithms/Legacy/Forward/BuildBEMatrixAlgo.h>
@@ -80,7 +78,6 @@ void BuildBEMatrix::execute()
     auto insideConds = state->getValue(Parameters::InsideConductivityList).toVector();
 
     BuildBEMatrixImpl impl(fieldNames, boundaryConditions, outsideConds, insideConds, this);
-
     MatrixHandle transferMatrix = impl.executeImpl(inputs);
     auto fieldTypes = impl.getInputTypes();
     state->setTransientValue(Parameters::FieldTypeList, fieldTypes);

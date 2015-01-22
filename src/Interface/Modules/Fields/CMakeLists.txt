@@ -50,6 +50,7 @@ SET(Interface_Modules_Fields_FORMS
   calculatedistancetofield.ui #TODO: fix case
   calculatedistancetofieldboundary.ui #TODO: fix case
   MapFieldDataOntoElems.ui
+  ConvertIndicesToFieldData.ui
   MapFieldDataOntoNodes.ui
   ClipFieldByFunction.ui
   RefineMesh.ui
@@ -70,7 +71,6 @@ SET(Interface_Modules_Fields_HEADERS
   SplitFieldByDomainDialog.h
   SplitFieldByConnectedRegionDialog.h
   InterfaceWithCleaverDialog.h
-  InterfaceWithTetGenDialog.h
   SetFieldDataDialog.h
   SetFieldDataToConstantValueDialog.h
   MapFieldDataFromElemToNodeDialog.h
@@ -88,6 +88,7 @@ SET(Interface_Modules_Fields_HEADERS
   share.h
   SwapFieldDataWithMatrixEntriesDialog.h
   EditMeshBoundingBoxDialog.h
+  ConvertIndicesToFieldDataDialog.h
 )
 
 SET(Interface_Modules_Fields_SOURCES
@@ -103,7 +104,6 @@ SET(Interface_Modules_Fields_SOURCES
   SplitFieldByDomainDialog.cc
   SplitFieldByConnectedRegionDialog.cc
   InterfaceWithCleaverDialog.cc
-  InterfaceWithTetGenDialog.cc
   SetFieldDataDialog.cc
   SetFieldDataToConstantValueDialog.cc
   MapFieldDataFromElemToNodeDialog.cc
@@ -119,7 +119,17 @@ SET(Interface_Modules_Fields_SOURCES
   SwapFieldDataWithMatrixEntriesDialog.cc
   RefineMeshDialog.cc
   EditMeshBoundingBoxDialog.cc
+  ConvertIndicesToFieldDataDialog.cc
 )
+
+IF(WITH_TETGEN)
+  SET(Interface_Modules_Fields_SOURCES ${Interface_Modules_Fields_SOURCES}
+    InterfaceWithTetGenDialog.cc
+  )
+  SET(Interface_Modules_Fields_HEADERS ${Interface_Modules_Fields_HEADERS}
+    InterfaceWithTetGenDialog.h
+  )
+ENDIF(WITH_TETGEN)
 
 QT4_WRAP_UI(Interface_Modules_Fields_FORMS_HEADERS ${Interface_Modules_Fields_FORMS})
 QT4_WRAP_CPP(Interface_Modules_Fields_HEADERS_MOC ${Interface_Modules_Fields_HEADERS})

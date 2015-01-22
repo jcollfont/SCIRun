@@ -3,7 +3,7 @@
 
    The MIT License
 
-   Copyright (c) 2009 Scientific Computing and Imaging Institute,
+   Copyright (c) 2012 Scientific Computing and Imaging Institute,
    University of Utah.
 
    
@@ -26,39 +26,14 @@
    DEALINGS IN THE SOFTWARE.
 */
 
+#undef SCISHARE
 
-#ifndef CORE_ALGORITHMS_FIELDS_TETGEN_INTERFACEWITHTETGEN_H
-#define CORE_ALGORITHMS_FIELDS_TETGEN_INTERFACEWITHTETGEN_H 1
-
-// Datatypes used
-#include <Core/Datatypes/Field.h>
-#include <vector>
-
-// Base for algorithm
-#include <Core/Algorithms/Util/AlgoBase.h>
-
-// for Windows support
-#include <Core/Algorithms/Fields/share.h>
-
-namespace SCIRunAlgo {
-
-using namespace SCIRun;
-
-class SCISHARE InterfaceWithTetGenAlgo : public AlgoBase
-{
-  public:
-    // Algorithm defaults
-    InterfaceWithTetGenAlgo()
-    {
-      /// command options
-      add_string("cmmd_ln", "--");
-    }
-
-  public:
-    // Algorithm Functions
-    bool run(FieldHandle mainFldH, std::vector<FieldHandle>& regionsFldH, FieldHandle ptsFldH, FieldHandle regionAttribsFldH, FieldHandle& output);   
-};
-
-} // namespace SCIRunAlgo
-
+#if defined(_WIN32) && !defined(BUILD_SCIRUN_STATIC)
+#ifdef BUILD_Modules_Legacy_Inverse
+#define SCISHARE __declspec(dllexport)
+#else
+#define SCISHARE __declspec(dllimport)
+#endif
+#else
+#define SCISHARE
 #endif

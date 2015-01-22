@@ -45,7 +45,7 @@ ShowFieldDialog::ShowFieldDialog(const std::string& name, ModuleStateHandle stat
 	setupUi(this);
 	setWindowTitle(QString::fromStdString(name));
 	fixSize();
-
+	tabStyle(this->displayOptionsTabs_);
 	addCheckBoxManager(showNodesCheckBox_, ShowFieldModule::ShowNodes);
 	addCheckBoxManager(showEdgesCheckBox_, ShowFieldModule::ShowEdges);
 	addCheckBoxManager(showFacesCheckBox_, ShowFieldModule::ShowFaces);
@@ -53,13 +53,23 @@ ShowFieldDialog::ShowFieldDialog(const std::string& name, ModuleStateHandle stat
 	addCheckBoxManager(enableTransparencyEdgesCheckBox_, ShowFieldModule::EdgeTransparency);
 	addCheckBoxManager(enableTransparencyFacesCheckBox_, ShowFieldModule::FaceTransparency);
 	addCheckBoxManager(invertNormalsCheckBox, ShowFieldModule::FaceInvertNormals);
+  addDoubleSpinBoxManager(transparencyDoubleSpinBox_, ShowFieldModule::FaceTransparencyValue);
+  connectButtonToExecuteSignal(showNodesCheckBox_);
+  connectButtonToExecuteSignal(showEdgesCheckBox_);
+  connectButtonToExecuteSignal(showFacesCheckBox_);
+  connectButtonToExecuteSignal(enableTransparencyNodesCheckBox_);
+  connectButtonToExecuteSignal(enableTransparencyEdgesCheckBox_);
+  connectButtonToExecuteSignal(enableTransparencyFacesCheckBox_);
+  connectButtonToExecuteSignal(invertNormalsCheckBox);
 
 	connect(defaultMeshColorButton_, SIGNAL(clicked()), this, SLOT(assignDefaultMeshColor()));
 	connect(nodesAsPointsButton_, SIGNAL(clicked()), this, SLOT(pushNodeType()));
 	connect(nodesAsSpheresButton_, SIGNAL(clicked()), this, SLOT(pushNodeType()));
 
 	pushNodeType();
+  pushEdgeType();
 	pushColor();
+  pushTransparencyValue();
 }
 
 void ShowFieldDialog::push()
@@ -104,3 +114,13 @@ void ShowFieldDialog::pushNodeType()
 	state_->setValue(ShowFieldModule::NodeAsSpheres, nodesAsSpheresButton_->isChecked());
 }
 
+void ShowFieldDialog::pushEdgeType()
+{
+  state_->setValue(ShowFieldModule::EdgesAsLines, edgesAsLinesButton_->isChecked());
+  state_->setValue(ShowFieldModule::EdgesAsCylinders, edgesAsCylindersButton_->isChecked());
+}
+
+void ShowFieldDialog::pushTransparencyValue()
+{
+  state_->setValue(ShowFieldModule::FaceTransparencyValue, 0.50f);
+}

@@ -35,7 +35,7 @@ SET(Core_Algorithms_Legacy_Fields_HEADERS
   FieldData/BuildMatrixOfSurfaceNormalsAlgo.h
   #Mapping/ApplyMappingMatrix.h
   #FieldData/CalculateFieldDataMetric.h
-  #FieldData/ConvertIndicesToFieldData.h
+  FieldData/ConvertIndicesToFieldDataAlgo.h
   FieldData/CalculateGradientsAlgo.h
   FieldData/CalculateVectorMagnitudesAlgo.h
   #FieldData/ConvertMappingMatrixToFieldData.h
@@ -116,7 +116,7 @@ SET(Core_Algorithms_Legacy_Fields_SRCS
 #FieldData/ConvertFieldDataType.cc
   FieldData/ConvertFieldBasisType.cc
   FieldData/SwapFieldDataWithMatrixEntriesAlgo.cc
-  #FieldData/ConvertIndicesToFieldData.cc
+  FieldData/ConvertIndicesToFieldDataAlgo.cc
   #FieldData/GetFieldData.cc
   #FieldData/ConvertMappingMatrixToFieldData.cc
   FieldData/SetFieldData.cc
@@ -188,14 +188,6 @@ SET(Core_Algorithms_Legacy_Fields_SRCS
   #TransformMesh/GeneratePolarProjectionImage.cc
   #TracePoints/TracePoints.cc
 )
-
-# This algo is not used by the module (yet)
-IF(FALSE)
-IF(WITH_TETGEN)
-  SET(Core_Algorithms_Legacy_Fields_SRCS ${Core_Algorithms_Legacy_Fields_SRCS}
-    TetGen/InterfaceWithTetGen.cc)
-ENDIF(WITH_TETGEN)
-ENDIF()
 
 SCIRUN_ADD_LIBRARY(Core_Algorithms_Legacy_Fields
   ${Core_Algorithms_Legacy_Fields_HEADERS}

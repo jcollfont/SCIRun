@@ -58,6 +58,7 @@
 #include <Core/Application/Application.h>
 #include <Core/Application/Preferences/Preferences.h>
 #include <Core/Logging/Log.h>
+#include <Core/Application/Version.h>
 
 #include <Dataflow/Serialization/Network/XMLSerializer.h>
 #include <Dataflow/Serialization/Network/NetworkDescriptionSerialization.h>
@@ -77,12 +78,40 @@ using namespace SCIRun::Core::Algorithms;
 
 SCIRunMainWindow::SCIRunMainWindow() : firstTimePythonShown_(true)
 {
-  setupUi(this);
-  setAttribute(Qt::WA_DeleteOnClose);
-  if (newInterface())
-    setStyleSheet("background-color: rgb(66,66,69); color: white; selection-color: yellow; selection-background-color: blue; border: 5px;");
+	setupUi(this);
+	setAttribute(Qt::WA_DeleteOnClose);
+	if (newInterface())
+		setStyleSheet(
+		"background-color: rgb(66,66,69);"
+		"color: white;"
+		"selection-color: yellow;"
+		"selection-background-color: blue;"//336699 lighter blue
+		"QToolBar {        background-color: rgb(66,66,69); border: 1px solid black; color: black;     }"
+		"QProgressBar {        background-color: rgb(66,66,69); border: 0px solid black; color: black  ;   }"
+		"QDockWidget {background: rgb(66,66,69); background-color: rgb(66,66,69); }"
+		//"border: 1px solid white;"
+		//"border-radius: 3px;"
 
-  dialogErrorControl_.reset(new DialogErrorControl(this));
+		"QPushButton {"
+		"  border: 2px solid #8f8f91;"
+		"  border - radius: 6px;"
+		"  background - color: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1,"
+		"  stop : 0 #f6f7fa, stop: 1 #dadbde);"
+		"  min - width: 80px;"
+		"}"
+		"QPushButton:pressed{"
+		"background - color: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1,"
+		"stop : 0 #dadbde, stop: 1 #f6f7fa);"
+		"}"
+		"QPushButton:flat{"
+		"          border: none; /* no border for a flat push button */"
+		"}"
+		"QPushButton:default {"
+		"border - color: navy; /* make the default button prominent */"
+		"}"
+		);
+	menubar_->setStyleSheet("QMenuBar::item::selected{background-color : rgb(66, 66, 69); } QMenuBar::item::!selected{ background-color : rgb(66, 66, 69); } "); 
+	dialogErrorControl_.reset(new DialogErrorControl(this));
   setupNetworkEditor();
 
   setTipsAndWhatsThis();
@@ -119,6 +148,8 @@ SCIRunMainWindow::SCIRunMainWindow() : firstTimePythonShown_(true)
   setActionIcons();
 
   QToolBar* standardBar = addToolBar("Standard");
+  standardBar->setStyleSheet("QToolBar { background-color: rgb(66,66,69); border: 1px solid black; color: black }"
+		"QToolTip { color: #ffffff; background - color: #2a82da; border: 1px solid white; }");
   standardBar->setObjectName("StandardToolBar");
   standardBar->addAction(actionNew_);
   standardBar->addAction(actionLoad_);
@@ -139,7 +170,7 @@ SCIRunMainWindow::SCIRunMainWindow() : firstTimePythonShown_(true)
   standardBar->addAction(actionResetNetworkZoom_);
   standardBar->addAction(actionDragMode_);
   standardBar->addAction(actionSelectMode_);
-  standardBar->setStyleSheet(styleSheet());
+  //standardBar->setStyleSheet(styleSheet());
   //setUnifiedTitleAndToolBarOnMac(true);
 
   QToolBar* executeBar = addToolBar(tr("&Execute"));
@@ -148,7 +179,10 @@ SCIRunMainWindow::SCIRunMainWindow() : firstTimePythonShown_(true)
 
   networkProgressBar_.reset(new NetworkExecutionProgressBar(this));
   executeBar->addActions(networkProgressBar_->actions());
-  executeBar->setStyleSheet(styleSheet());
+  executeBar->setStyleSheet("QToolBar { background-color: rgb(66,66,69); border: 1px solid black; color: black }"
+		"QToolTip { color: #ffffff; background - color: #2a82da; border: 1px solid white; }"
+		);
+  //executeBar->setStyleSheet(styleSheet());
   executeBar->setAutoFillBackground(true);
   connect(actionExecute_All_, SIGNAL(triggered()), networkProgressBar_.get(), SLOT(resetModulesDone()));
   connect(networkEditor_->moduleEventProxy().get(), SIGNAL(moduleExecuteEnd(const std::string&)), networkProgressBar_.get(), SLOT(incrementModulesDone()));
@@ -199,8 +233,8 @@ SCIRunMainWindow::SCIRunMainWindow() : firstTimePythonShown_(true)
   //TODO: will be a user or network setting
   makePipesEuclidean();
 
-  connect(largeModuleSizeRadioButton_, SIGNAL(clicked()), this, SLOT(makeModulesLargeSize()));
-  connect(smallModuleSizeRadioButton_, SIGNAL(clicked()), this, SLOT(makeModulesSmallSize()));
+  connect(largeModuleSizeToolButton_, SIGNAL(clicked()), this, SLOT(makeModulesLargeSize()));
+  connect(smallModuleSizeToolButton_, SIGNAL(clicked()), this, SLOT(makeModulesSmallSize()));
 
   for (int i = 0; i < MaxRecentFiles; ++i)
   {
@@ -259,9 +293,16 @@ SCIRunMainWindow::SCIRunMainWindow() : firstTimePythonShown_(true)
   actionModule_Selector->setChecked(!moduleSelectorDockWidget_->isHidden());
   actionProvenance_->setChecked(!provenanceWindow_->isHidden());
 
+	moduleSelectorDockWidget_->setStyleSheet("QDockWidget {background: rgb(66,66,69); background-color: rgb(66,66,69) }"
+		"QToolTip { color: #ffffff; background - color: #2a82da; border: 1px solid white; }"
+		"QHeaderView::section { background: rgb(66,66,69);} "
+		);
+
   provenanceWindow_->hide();
 
   hideNonfunctioningWidgets();
+
+  statusBar()->addPermanentWidget(new QLabel("Version: " + QString::fromStdString(VersionInfo::GIT_VERSION_TAG)));
 
   //parseStyleXML();
 }
@@ -390,7 +431,7 @@ void SCIRunMainWindow::executeCommandLineRequests()
 
 void SCIRunMainWindow::executeAll()
 {
-  if (Core::Preferences::Instance().saveBeforeExecute)
+  if (Core::Preferences::Instance().saveBeforeExecute && !Core::Application::Instance().parameters()->isRegressionMode())
   {
     saveNetwork();
   }
@@ -407,7 +448,7 @@ void SCIRunMainWindow::setupQuitAfterExecute()
 void SCIRunMainWindow::exitApplication(int code)
 {
   close();
-  /*qApp->*/exit(code);
+  qApp->exit(code);
 }
 
 void SCIRunMainWindow::quit()
@@ -590,18 +631,18 @@ void SCIRunMainWindow::networkModified()
 
 void SCIRunMainWindow::setActionIcons()
 {
-  actionNew_->setIcon(QPixmap(":/general/Resources/new.png"));
-  actionLoad_->setIcon(QPixmap(":/general/Resources/load.png"));
-  actionSave_->setIcon(QPixmap(":/general/Resources/save.png"));
-  actionRunScript_->setIcon(QPixmap(":/general/Resources/script.png"));
+  actionNew_->setIcon(QPixmap(":/general/Resources/new/general/new.png"));
+  actionLoad_->setIcon(QPixmap(":/general/Resources/new/general/folder.png"));
+  actionSave_->setIcon(QPixmap(":/general/Resources/new/general/save.png"));
+  actionRunScript_->setIcon(QPixmap(":/general/Resources/new/general/wand.png"));
   //actionSave_As_->setIcon(QApplication::style()->standardIcon(QStyle::SP_DriveCDIcon));  //TODO?
-  actionExecute_All_->setIcon(QApplication::style()->standardIcon(QStyle::SP_MediaPlay));
+  actionExecute_All_->setIcon(QPixmap(":/general/Resources/new/general/run.png"));
   actionUndo_->setIcon(QPixmap(":/general/Resources/undo.png"));
   actionRedo_->setIcon(QPixmap(":/general/Resources/redo.png"));
   //actionCut_->setIcon(QApplication::style()->standardIcon(QStyle::SP_MediaPlay));
-  actionHideAllModuleUIs_->setIcon(QPixmap(":/general/Resources/hideAll.png"));
-  actionPinAllModuleUIs_->setIcon(QPixmap(":/general/Resources/rightAll.png"));
-  actionRestoreAllModuleUIs_->setIcon(QPixmap(":/general/Resources/showAll.png"));
+  actionHideAllModuleUIs_->setIcon(QPixmap(":/general/Resources/new/general/hideAll.png"));
+  actionPinAllModuleUIs_->setIcon(QPixmap(":/general/Resources/new/general/rightAll.png"));
+  actionRestoreAllModuleUIs_->setIcon(QPixmap(":/general/Resources/new/general/showAll.png"));
 
   actionCenterNetworkViewer_->setIcon(QPixmap(":/general/Resources/align_center.png"));
   actionResetNetworkZoom_->setIcon(QPixmap(":/general/Resources/zoom_reset.png"));
@@ -871,12 +912,12 @@ void SCIRunMainWindow::showPythonWarning(bool visible)
 
 void SCIRunMainWindow::makeModulesLargeSize()
 {
-  std::cout << "Modules are large" << std::endl;
+  networkEditor_->setModuleMini(false);
 }
 
 void SCIRunMainWindow::makeModulesSmallSize()
 {
-  std::cout << "TODO: Modules are small" << std::endl;
+  networkEditor_->setModuleMini(true);
 }
 
 namespace {
@@ -1046,13 +1087,14 @@ void SCIRunMainWindow::displayAcknowledgement()
 
 void SCIRunMainWindow::setDataDirectory(const QString& dir)
 {
-  scirunDataLineEdit_->setText(dir);
-  scirunDataLineEdit_->setToolTip(dir);
   if (!dir.isEmpty())
-	{
+  {
+    scirunDataLineEdit_->setText(dir);
+    scirunDataLineEdit_->setToolTip(dir);
+
     RemembersFileDialogDirectory::setStartingDir(dir);
-		Core::Preferences::Instance().setDataDirectory(dir.toStdString());
-	}
+    Core::Preferences::Instance().setDataDirectory(dir.toStdString());
+  }
 }
 
 QString SCIRunMainWindow::dataDirectory() const
@@ -1068,7 +1110,7 @@ void SCIRunMainWindow::setDataDirectoryFromGUI()
 
 bool SCIRunMainWindow::newInterface() const
 {
-  return Core::Application::Instance().parameters()->entireCommandLine().find("--experimentalGUI") != std::string::npos;
+  return Core::Application::Instance().parameters()->entireCommandLine().find("--originalGUI") == std::string::npos;
 }
 
 namespace {
@@ -1272,4 +1314,22 @@ void SCIRunMainWindow::adjustModuleDock(int state)
   bool dockable = dockableModulesCheckBox_->isChecked();
   actionPinAllModuleUIs_->setEnabled(dockable);
   Preferences::Instance().modulesAreDockable.setValue(dockable);
+}
+
+void SCIRunMainWindow::keyPressEvent(QKeyEvent *event)
+{
+	if (event->key() == Qt::Key_Shift)
+	{
+		statusBar()->showMessage("Network zoom active");
+	}
+  QMainWindow::keyPressEvent(event);
+}
+
+void SCIRunMainWindow::keyReleaseEvent(QKeyEvent *event)
+{
+	if (event->key() == Qt::Key_Shift)
+	{
+    statusBar()->showMessage("Network zoom inactive", 1000);
+	}
+  QMainWindow::keyPressEvent(event);
 }

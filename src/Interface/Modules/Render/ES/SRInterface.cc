@@ -69,6 +69,8 @@ DEALINGS IN THE SOFTWARE.
 #include "comp/LightingUniforms.h"
 #include "systems/RenderBasicSys.h"
 #include "systems/RenderColorMapSys.h"
+#include "systems/RenderTransBasicSys.h"
+#include "systems/RenderTransColorMapSys.h"
 
 using namespace std::placeholders;
 
@@ -88,6 +90,9 @@ namespace SCIRun {
 		{
 			// Create default colormaps.
 			generateColormaps();
+
+      showOrientation_ = true;
+      autoRotate_ = false;
 
 			// Construct ESCore. We will need to bootstrap the core. We should also
 			// probably add utility static classes.
@@ -122,7 +127,8 @@ namespace SCIRun {
   {
 	  // Generate synchronous filesystem, manually add its static component,
 	  // then mark it as non-serializable.
-	  std::string filesystemRoot = ""; // Should set this to the relative path containing static data.
+    std::string filesystemRoot = SCIRun::Core::Application::Instance().executablePath().string();
+    filesystemRoot += boost::filesystem::path::preferred_separator;
 	  fs::StaticFS fileSystem(
 		  std::shared_ptr<fs::FilesystemSync>(new fs::FilesystemSync(filesystemRoot)));
 	  mCore.addStaticComponent(fileSystem);
@@ -234,13 +240,13 @@ namespace SCIRun {
 		}
 
 		//------------------------------------------------------------------------------
-		uint64_t SRInterface::getEntityIDForName(const std::string& name)
+		uint64_t SRInterface::getEntityIDForName(const std::string& name, int port)
 		{
-			return static_cast<uint64_t>(std::hash<std::string>()(name));
+			return (static_cast<uint64_t>(std::hash<std::string>()(name)) >> 8) + (static_cast<uint64_t>(port) << 56);
 		}
 
 		//------------------------------------------------------------------------------
-		void SRInterface::handleGeomObject(boost::shared_ptr<Core::Datatypes::GeometryObject> obj)
+		void SRInterface::handleGeomObject(boost::shared_ptr<Core::Datatypes::GeometryObject> obj, int port)
 		{
 			// Ensure our rendering context is current on our thread.
 			mContext->makeCurrent();
@@ -268,7 +274,7 @@ namespace SCIRun {
 				// entity ID.
 				for (const auto& pass : foundObject->mPasses)
 				{
-					uint64_t entityID = getEntityIDForName(pass.passName);
+					uint64_t entityID = getEntityIDForName(pass.passName, port);
 					mCore.removeEntity(entityID);
 				}
 
@@ -360,17 +366,17 @@ namespace SCIRun {
 
 			// Add default identity transform to the object globally (instead of per-pass)
 			glm::mat4 xform;
-			mSRObjects.push_back(SRObject(objectName, xform, bbox, obj->mColorMap));
+			mSRObjects.push_back(SRObject(objectName, xform, bbox, obj->mColorMap, port));
 			SRObject& elem = mSRObjects.back();
 
 			ren::ShaderMan& shaderMan = *mCore.getStaticComponent<ren::StaticShaderMan>()->instance;
 
 			// Add passes
-			for (auto it = obj->mPasses.cbegin(); it != obj->mPasses.cend(); ++it)
+			for (auto it = obj->mPasses.begin(); it != obj->mPasses.end(); ++it)
 			{
-				const Core::Datatypes::GeometryObject::SpireSubPass& pass = *it;
+				Core::Datatypes::GeometryObject::SpireSubPass& pass = *it;
 
-				uint64_t entityID = getEntityIDForName(pass.passName);
+				uint64_t entityID = getEntityIDForName(pass.passName, port);
 
 				if (pass.renderType == Core::Datatypes::GeometryObject::RENDER_VBO_IBO)
 				{
@@ -396,106 +402,113 @@ namespace SCIRun {
 						}
 					}
 
-					// Lookup the VBOs and IBOs associated with this particular draw list
-					// and add them to our entity in question.
-					std::string assetName = "Assets/sphere.geom";
+          // Lookup the VBOs and IBOs associated with this particular draw list
+          // and add them to our entity in question.
+          std::string assetName = "Assets/sphere.geom";
 
-					if (pass.renderType == Core::Datatypes::GeometryObject::RENDER_RLIST_SPHERE)
-					{
-						assetName = "Assets/sphere.geom";
-					}
+          if (pass.renderType == Core::Datatypes::GeometryObject::RENDER_RLIST_SPHERE)
+          {
+            assetName = "Assets/sphere.geom";
+          }
 
-					addVBOToEntity(entityID, assetName);
-					addIBOToEntity(entityID, assetName);
-				}
+          if (pass.renderType == Core::Datatypes::GeometryObject::RENDER_RLIST_CYLINDER)
+          {
+            assetName = "Assests/arrow.geom";
+          }
 
-				// Load vertex and fragment shader will use an already loaded program.
-				//addShaderToEntity(entityID, pass.programName);
-				shaderMan.loadVertexAndFragmentShader(mCore, entityID, pass.programName);
+          addVBOToEntity(entityID, assetName);
+          addIBOToEntity(entityID, assetName);
+        }
 
-				// Add transformation
-				gen::Transform trafo;
-				mCore.addComponent(entityID, trafo);
+        // Load vertex and fragment shader will use an already loaded program.
+        //addShaderToEntity(entityID, pass.programName);
+        shaderMan.loadVertexAndFragmentShader(mCore, entityID, pass.programName);
 
-				// Add lighting uniform checks
-				LightingUniforms lightUniforms;
-				mCore.addComponent(entityID, lightUniforms);
+        // Add transformation
+        gen::Transform trafo;
+        mCore.addComponent(entityID, trafo);
 
-				// Add SCIRun render state.
-				SRRenderState state;
-				state.state = pass.renderState;
-				mCore.addComponent(entityID, state);
+        // Add lighting uniform checks
+        LightingUniforms lightUniforms;
+        mCore.addComponent(entityID, lightUniforms);
 
-				// Add appropriate renderer based on the color scheme to use.
-				if (pass.mColorScheme == Core::Datatypes::GeometryObject::COLOR_UNIFORM
-					|| pass.mColorScheme == Core::Datatypes::GeometryObject::COLOR_IN_SITU)
-				{
-					RenderBasicGeom geom;
-					mCore.addComponent(entityID, geom);
-				}
-				else if (pass.mColorScheme == Core::Datatypes::GeometryObject::COLOR_MAP
-					&& obj->mColorMap)
-				{
-					RenderColorMapGeom geom;
-					mCore.addComponent(entityID, geom);
+        // Add SCIRun render state.
+        SRRenderState state;
+        state.state = pass.renderState;
+        mCore.addComponent(entityID, state);
 
-					// Construct texture component and add it to our entity for rendering.
-					ren::Texture component;
-					component.textureUnit = 0;
-					component.setUniformName("uTX0");
-					component.textureType = GL_TEXTURE_1D;
+        // Add appropriate renderer based on the color scheme to use.
+        if (pass.mColorScheme == Core::Datatypes::GeometryObject::COLOR_UNIFORM
+          || pass.mColorScheme == Core::Datatypes::GeometryObject::COLOR_IN_SITU)
+        {
+          RenderBasicGeom geom;
+          mCore.addComponent(entityID, geom);
+        }
+        else if (pass.mColorScheme == Core::Datatypes::GeometryObject::COLOR_MAP
+          && obj->mColorMap)
+        {
+          RenderColorMapGeom geom;
+          mCore.addComponent(entityID, geom);
 
-					// Setup appropriate texture to render the color map.
-					if (*obj->mColorMap == "Rainbow")
-					{
-						component.glid = mRainbowCMap;
-					}
-					else
-					{
-						component.glid = mGrayscaleCMap;
-					}
-					mCore.addComponent(entityID, component);
+          // Construct texture component and add it to our entity for rendering.
+          ren::Texture component;
+          component.textureUnit = 0;
+          component.setUniformName("uTX0");
+          component.textureType = GL_TEXTURE_1D;
 
-					// Compare entity and system requirements.
-					//mCore.displayEntityVersusSystemInfo(entityID, getSystemName_RenderColorMap());
-				}
-				else
-				{
-					std::cerr << "Renderer: Unknown color scheme!" << std::endl;
-					RenderBasicGeom geom;
-					mCore.addComponent(entityID, geom);
-				}
+          // Setup appropriate texture to render the color map.
+          if (*obj->mColorMap == "Rainbow")
+          {
+            component.glid = mRainbowCMap;
+          }
+          else
+          {
+            component.glid = mGrayscaleCMap;
+          }
+          mCore.addComponent(entityID, component);
 
-				// Ensure common uniforms are covered.
-				ren::CommonUniforms commonUniforms;
-				mCore.addComponent(entityID, commonUniforms);
+          // Compare entity and system requirements.
+          //mCore.displayEntityVersusSystemInfo(entityID, getSystemName_RenderColorMap());
+        }
+        else
+        {
+          std::cerr << "Renderer: Unknown color scheme!" << std::endl;
+          RenderBasicGeom geom;
+          mCore.addComponent(entityID, geom);
+        }
 
-				for (const auto& uniform : pass.mUniforms)
-				{
-					applyUniform(entityID, uniform);
-				}
+        // Ensure common uniforms are covered.
+        ren::CommonUniforms commonUniforms;
+        mCore.addComponent(entityID, commonUniforms);
 
-				// Add components associated with entity. We just need a base class which
-				// we can pass in an entity ID, then a derived class which bundles
-				// all associated components (including types) together. We can use
-				// a variadic template for this. This will allow us to place any components
-				// we want on the objects in question in show field. This could lead to
-				// much simpler customization.
+        for (const auto& uniform : pass.mUniforms)
+        {
+          applyUniform(entityID, uniform);
+        }
 
-				// Add a pass to our local object.
-				elem.mPasses.emplace_back(pass.passName, pass.renderType);
-			}
+        // Add components associated with entity. We just need a base class which
+        // we can pass in an entity ID, then a derived class which bundles
+        // all associated components (including types) together. We can use
+        // a variadic template for this. This will allow us to place any components
+        // we want on the objects in question in show field. This could lead to
+        // much simpler customization.
 
-			// Recalculate scene bounding box. Should only be done when an object is added.
-			mSceneBBox.reset();
-			for (auto it = mSRObjects.begin(); it != mSRObjects.end(); ++it)
-			{
-				if (it->mBBox.valid())
-				{
-					mSceneBBox.extend(it->mBBox);
-				}
-			}
-		}
+        // Add a pass to our local object.
+        elem.mPasses.emplace_back(pass.passName, pass.renderType);
+        mCore.addComponent(entityID, pass);
+
+      }
+
+      // Recalculate scene bounding box. Should only be done when an object is added.
+      mSceneBBox.reset();
+      for (auto it = mSRObjects.begin(); it != mSRObjects.end(); ++it)
+      {
+        if (it->mBBox.valid())
+        {
+          mSceneBBox.extend(it->mBBox);
+        }
+      }
+    }
 
 		//------------------------------------------------------------------------------
 		void SRInterface::addVBOToEntity(uint64_t entityID, const std::string& vboName)
@@ -554,14 +567,13 @@ namespace SCIRun {
 		void SRInterface::removeAllGeomObjects()
 		{
 			mContext->makeCurrent();
-
 			for (auto it = mSRObjects.begin(); it != mSRObjects.end(); ++it)
 			{
 				// Iterate through each of the passes and remove their associated
 				// entity ID.
 				for (const auto& pass : it->mPasses)
 				{
-					uint64_t entityID = getEntityIDForName(pass.passName);
+					uint64_t entityID = getEntityIDForName(pass.passName, it->mPort);
 					mCore.removeEntity(entityID);
 				}
 			}
@@ -580,7 +592,7 @@ namespace SCIRun {
 				{
 					for (const auto& pass : it->mPasses)
 					{
-						uint64_t entityID = getEntityIDForName(pass.passName);
+						uint64_t entityID = getEntityIDForName(pass.passName, it->mPort);
 						mCore.removeEntity(entityID);
 					}
 					it = mSRObjects.erase(it);
@@ -698,6 +710,14 @@ namespace SCIRun {
 
 			GL(glBindBuffer(GL_ARRAY_BUFFER, arrowVBO));
 			GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, arrowIBO));
+
+      bool depthMask = glIsEnabled(GL_DEPTH_WRITEMASK);
+      bool cullFace = glIsEnabled(GL_CULL_FACE);
+      bool blend = glIsEnabled(GL_BLEND);
+
+      GL(glDepthMask(GL_TRUE));
+      GL(glDisable(GL_CULL_FACE));
+      GL(glDisable(GL_BLEND));
 
 			// Note that we can pull aspect ratio from the screen dimensions static
 			// variable.
@@ -862,6 +882,19 @@ namespace SCIRun {
   }
 
 			mArrowAttribs.unbind();
+
+      if (!depthMask)
+      {
+        GL(glDepthMask(GL_FALSE));
+      }
+      if (cullFace)
+      {
+        GL(glEnable(GL_CULL_FACE));
+      }
+      if (blend)
+      {
+        GL(glEnable(GL_BLEND));
+      }
 		}
 
 		// Manually update the StaticCamera.
@@ -1129,7 +1162,6 @@ namespace SCIRun {
 		// Create default colormaps.
 		void SRInterface::generateColormaps()
 		{
-			showOrientation_ = true;
 			size_t rainbowArraySize = sizeof(rainbowRaw) / sizeof(*rainbowRaw);
 
 			std::vector<uint8_t> rainbow;

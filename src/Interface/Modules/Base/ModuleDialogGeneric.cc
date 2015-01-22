@@ -45,6 +45,7 @@ ModuleDialogGeneric::ModuleDialogGeneric(SCIRun::Dataflow::Networks::ModuleState
   dock_(0)
 {
   setModal(false);
+  setAttribute(Qt::WA_MacAlwaysShowToolWindow, true);
 
   if (state_)
   {
@@ -59,6 +60,11 @@ ModuleDialogGeneric::ModuleDialogGeneric(SCIRun::Dataflow::Networks::ModuleState
 
 ModuleDialogGeneric::~ModuleDialogGeneric()
 {
+}
+
+void ModuleDialogGeneric::connectButtonToExecuteSignal(QAbstractButton* button)
+{
+  connect(button, SIGNAL(clicked()), this, SIGNAL(executeActionTriggered()));
 }
 
 void ModuleDialogGeneric::updateWindowTitle(const QString& title)
@@ -520,4 +526,86 @@ private:
 void ModuleDialogGeneric::addCheckableButtonManager(QAbstractButton* checkable, const AlgorithmParameterName& stateKey)
 {
   addWidgetSlotManager(boost::make_shared<CheckableButtonSlotManager>(state_, *this, stateKey, checkable));
+}
+
+class DynamicLabelSlotManager : public WidgetSlotManager
+{
+public:
+  DynamicLabelSlotManager(ModuleStateHandle state, ModuleDialogGeneric& dialog, const AlgorithmParameterName& stateKey, QLabel* label) :
+    WidgetSlotManager(state, dialog), stateKey_(stateKey), label_(label)
+  {
+  }
+  virtual void pull() override
+  {
+    auto newValue = state_->getValue(stateKey_).toString();
+    if (newValue != label_->text().toStdString())
+    {
+      LOG_DEBUG("In new version of pull code for checkable QAbstractButton: " << newValue);
+      label_->setText(QString::fromStdString(newValue));
+    }
+  }
+  virtual void pushImpl() override
+  {
+  }
+private:
+  AlgorithmParameterName stateKey_;
+  QLabel* label_;
+};
+
+void ModuleDialogGeneric::addDynamicLabelManager(QLabel* label, const AlgorithmParameterName& stateKey)
+{
+  addWidgetSlotManager(boost::make_shared<DynamicLabelSlotManager>(state_, *this, stateKey, label));
+}
+
+class RadioButtonGroupSlotManager : public WidgetSlotManager
+{
+public:
+  RadioButtonGroupSlotManager(ModuleStateHandle state, ModuleDialogGeneric& dialog, const AlgorithmParameterName& stateKey, std::initializer_list<QRadioButton*> radioButtons) :
+    WidgetSlotManager(state, dialog), stateKey_(stateKey), radioButtons_(radioButtons)
+  {
+    for (auto button : radioButtons_)
+      connect(button, SIGNAL(clicked()), this, SLOT(push()));
+  }
+  virtual void pull() override
+  {
+    auto checkedIndex = state_->getValue(stateKey_).toInt();
+    if (checkedIndex >= 0 && checkedIndex < radioButtons_.size())
+    {
+      if (!radioButtons_[checkedIndex]->isChecked())
+      {
+        LOG_DEBUG("In new version of pull code for radio button group: " << checkedIndex);
+        radioButtons_[checkedIndex]->setChecked(true);
+      }
+    }
+  }
+  virtual void pushImpl() override
+  {
+    auto firstChecked = std::find_if(radioButtons_.begin(), radioButtons_.end(), [](QRadioButton* button) { return button->isChecked(); });
+    int indexOfChecked = firstChecked - radioButtons_.begin();
+    state_->setValue(stateKey_, indexOfChecked);
+  }
+private:
+  AlgorithmParameterName stateKey_;
+  std::vector<QRadioButton*> radioButtons_;
+};
+
+void ModuleDialogGeneric::addRadioButtonGroupManager(std::initializer_list<QRadioButton*> radioButtons, const AlgorithmParameterName& stateKey)
+{
+  addWidgetSlotManager(boost::make_shared<RadioButtonGroupSlotManager>(state_, *this, stateKey, radioButtons));
+}
+
+void ModuleDialogGeneric::tabStyle(QTabWidget* tabs)
+{
+	tabs->setStyleSheet(
+		"QTabBar::tab::selected, QTabBar::tab::hover         {color:black; background-color: #F0F0F0; border: 1px solid rgb(66,66,69); min-width:2ex; padding: 5px 10px;} "
+		"QTabBar::tab:!selected {color: white; background-color: rgb(66,66,69); border: 1px solid #FFFFFF; min-width:2ex; padding: 5px 10px; }"
+		"QTabBar::tab:selected  {color:black; background-color: #F0F0F0; border: 1px solid rgb(66,66,69); min-width:2ex; padding: 5px 10px;}"
+		);
+}
+
+void ModuleDialogGeneric::tableHeaderStyle(QTableWidget* tableHeader)
+{
+	tableHeader->setStyleSheet(
+		"QHeaderView::section {background: rgb(66,66,69);}"
+		); 
 }
