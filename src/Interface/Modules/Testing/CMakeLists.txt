@@ -43,8 +43,8 @@ SET(Interface_Modules_Testing_SOURCES
   SendScalarDialog.cc
 )
 
-QT4_WRAP_UI(Interface_Modules_Testing_FORMS_HEADERS ${Interface_Modules_Testing_FORMS})
-QT4_WRAP_CPP(Interface_Modules_Testing_HEADERS_MOC ${Interface_Modules_Testing_HEADERS})
+QT5_WRAP_UI(Interface_Modules_Testing_FORMS_HEADERS ${Interface_Modules_Testing_FORMS})
+QT5_WRAP_CPP(Interface_Modules_Testing_HEADERS_MOC ${Interface_Modules_Testing_HEADERS})
 
 SCIRUN_ADD_LIBRARY(Interface_Modules_Testing 
   ${Interface_Modules_Testing_HEADERS}
