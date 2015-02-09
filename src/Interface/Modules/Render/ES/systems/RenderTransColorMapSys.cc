@@ -153,7 +153,7 @@ private:
 
       if (distance >= 1.25 || sortedID == NULL)
       {
-        std::cout << "Enter Sorting Loop" << std::endl;
+        //std::cout << "Enter Sorting Loop" << std::endl;
         if (sortedID != NULL)
         {
           iboMan.front().instance->removeInMemoryIBO(sortedID);
