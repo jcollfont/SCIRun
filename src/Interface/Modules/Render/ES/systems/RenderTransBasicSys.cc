@@ -153,7 +153,7 @@ private:
       Core::Geometry::Vector diff = prevDir - dir;
       float distance = sqrtf(Core::Geometry::Dot(diff, diff));
 
-      if (distance >= 1.25 || sortedID == NULL)
+      if (distance >= 1.23 || sortedID == NULL)
       {
         std::cout << "Enter Sorting Loop" << std::endl;
         if (sortedID != NULL)
@@ -287,10 +287,9 @@ private:
     // Disable zwrite if we are rendering a transparent object.
     //if (srstate.front().state.get(RenderState::USE_TRANSPARENCY))
     bool depthMask = glIsEnabled(GL_DEPTH_WRITEMASK);
-    bool cullFace = glIsEnabled(GL_CULL_FACE);
-    bool blend = glIsEnabled(GL_BLEND);
+    bool cullFace  = glIsEnabled(GL_CULL_FACE);
+    bool blend     = glIsEnabled(GL_BLEND);
       
-    GL(glEnable(GL_DEPTH_TEST));
     GL(glDepthMask(GL_FALSE));
     GL(glDisable(GL_CULL_FACE));
     GL(glEnable(GL_BLEND));

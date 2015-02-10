@@ -161,8 +161,8 @@ public:
     GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo.front().glid));
     
     bool depthMask = glIsEnabled(GL_DEPTH_WRITEMASK);
-    bool cullFace = glIsEnabled(GL_CULL_FACE);
-    bool blend = glIsEnabled(GL_BLEND);
+    bool cullFace  = glIsEnabled(GL_CULL_FACE);
+    bool blend     = glIsEnabled(GL_BLEND);
     
     GL(glDepthMask(GL_TRUE));
     GL(glDisable(GL_CULL_FACE));
