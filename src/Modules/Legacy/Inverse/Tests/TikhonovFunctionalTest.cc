@@ -6,7 +6,7 @@
    Copyright (c) 2009 Scientific Computing and Imaging Institute,
    University of Utah.
 
-   
+ 
    Permission is hereby granted, free of charge, to any person obtaining a
    copy of this software and associated documentation files (the "Software"),
    to deal in the Software without restriction, including without limitation
@@ -190,3 +190,311 @@ TEST_F(TikhonovFunctionalTest,loadIDNonSquareFwdMatrixANDRandDataDiffSizes)
     EXPECT_THROW(tikAlgImp->execute(),SCIRun::Core::DimensionMismatch);
     
 }
+
+
+// -------- REGULARIZATION INPUTS TESTS -------------
+
+// NULL TO SOURCE REGULARIZATION (should be ok)
+// TODO: FAILS TEST: should it throw when a NULL input is given or should it go as if there was no input?
+TEST_F(TikhonovFunctionalTest,sourceRegularizationNULL)
+{
+    auto tikAlgImp = makeModule("SolveInverseProblemWithTikhonov");
+    MatrixHandle fwdMatrix( new DenseMatrix(DenseMatrix::Identity(3,3)) );    // forward matrix (IDentityt)
+    MatrixHandle measuredData( new DenseMatrix(DenseMatrix::Random(3,1)) );   // measurement data (rand)
+    MatrixHandle sourceReguMatrix;
+    
+    // input data
+    stubPortNWithThisData(tikAlgImp, 0, fwdMatrix);
+    stubPortNWithThisData(tikAlgImp, 1, sourceReguMatrix);
+    stubPortNWithThisData(tikAlgImp, 2, measuredData);
+    // check result
+    EXPECT_NO_THROW(tikAlgImp->execute());
+    
+}
+
+// NULL TO RESIDUAL REGULARIZATION (should be ok)
+// TODO: FAILS TEST: should it throw when a NULL input is given or should it go as if there was no input?
+TEST_F(TikhonovFunctionalTest,residualRegularizationNULL)
+{
+    auto tikAlgImp = makeModule("SolveInverseProblemWithTikhonov");
+    MatrixHandle fwdMatrix( new DenseMatrix(DenseMatrix::Identity(3,3)) );    // forward matrix (IDentityt)
+    MatrixHandle measuredData( new DenseMatrix(DenseMatrix::Random(3,1)) );   // measurement data (rand)
+    MatrixHandle residualReguMatrix;
+    
+    // input data
+    stubPortNWithThisData(tikAlgImp, 0, fwdMatrix);
+    stubPortNWithThisData(tikAlgImp, 2, measuredData);
+    stubPortNWithThisData(tikAlgImp, 3, residualReguMatrix);
+    // check result
+    EXPECT_NO_THROW(tikAlgImp->execute());
+    
+}
+
+// NULL TO SOURCE AND RESIDUAL REGULARIZATION (should be ok)
+// TODO: FAILS TEST: should it throw when a NULL input is given or should it go as if there was no input?
+TEST_F(TikhonovFunctionalTest,sourceRegularizationNULLresidualRegularizationNULL)
+{
+    auto tikAlgImp = makeModule("SolveInverseProblemWithTikhonov");
+    MatrixHandle fwdMatrix( new DenseMatrix(DenseMatrix::Identity(3,3)) );    // forward matrix (IDentityt)
+    MatrixHandle measuredData( new DenseMatrix(DenseMatrix::Random(3,1)) );   // measurement data (rand)
+    MatrixHandle residualReguMatrix, sourceReguMatrix;                        // NULL source and residual regularization
+    
+    // input data
+    stubPortNWithThisData(tikAlgImp, 0, fwdMatrix);
+    stubPortNWithThisData(tikAlgImp, 1, sourceReguMatrix);
+    stubPortNWithThisData(tikAlgImp, 2, measuredData);
+    stubPortNWithThisData(tikAlgImp, 3, residualReguMatrix);
+    // check result
+    EXPECT_NO_THROW(tikAlgImp->execute());
+    
+}
+
+// IDENTITY TO SOURCE SIZE_square_ok (no input should give same solution than ID)
+TEST_F(TikhonovFunctionalTest,sourceRegularizationID)
+{
+    auto tikAlgImp = makeModule("SolveInverseProblemWithTikhonov");
+    auto tikAlgImpIDregu = makeModule("SolveInverseProblemWithTikhonov");
+    MatrixHandle fwdMatrix( new DenseMatrix(DenseMatrix::Identity(3,3)) );    // forward matrix (IDentityt)
+    MatrixHandle measuredData( new DenseMatrix(DenseMatrix::Random(3,1)) );   // measurement data (rand)
+    MatrixHandle sourceReguMatrix( new DenseMatrix(DenseMatrix::Identity(3,3)) );
+    
+    // input data
+    stubPortNWithThisData(tikAlgImp, 0, fwdMatrix);
+    stubPortNWithThisData(tikAlgImp, 2, measuredData);
+    
+    // input data with ID regularization
+    stubPortNWithThisData(tikAlgImpIDregu, 0, fwdMatrix);
+    stubPortNWithThisData(tikAlgImpIDregu, 1, sourceReguMatrix);
+    stubPortNWithThisData(tikAlgImpIDregu, 2, measuredData);
+    
+    
+    // check result
+    EXPECT_NO_THROW(tikAlgImp->execute());
+    EXPECT_NO_THROW(tikAlgImpIDregu->execute());
+    
+    ASSERT_EQ(getDataOnThisOutputPort(tikAlgImp, 0), getDataOnThisOutputPort(tikAlgImpIDregu, 0));
+    
+}
+
+// IDENTITY TO SOURCE SIZE_square_ok (no input should give different solution than RAND)
+// TODO: Tikhonov without regularization matrix in the input (inside implements ID) should be different than any random matrix. If this test fails, means that sourceRegularizationID is not testing what it should be testing or there is something wrong in the algorithm
+TEST_F(TikhonovFunctionalTest,sourceRegularizationRAND)
+{
+    auto tikAlgImp = makeModule("SolveInverseProblemWithTikhonov");
+    auto tikAlgImpIDregu = makeModule("SolveInverseProblemWithTikhonov");
+    MatrixHandle fwdMatrix( new DenseMatrix(DenseMatrix::Identity(3,3)) );    // forward matrix (IDentityt)
+    MatrixHandle measuredData( new DenseMatrix(DenseMatrix::Random(3,1)) );   // measurement data (rand)
+    MatrixHandle sourceReguMatrix( new DenseMatrix(DenseMatrix::Random(3,3)) );
+    
+    // input data
+    stubPortNWithThisData(tikAlgImp, 0, fwdMatrix);
+    stubPortNWithThisData(tikAlgImp, 2, measuredData);
+    
+    // input data with ID regularization
+    stubPortNWithThisData(tikAlgImpIDregu, 0, fwdMatrix);
+    stubPortNWithThisData(tikAlgImpIDregu, 1, sourceReguMatrix);
+    stubPortNWithThisData(tikAlgImpIDregu, 2, measuredData);
+    
+    
+    // check result
+    EXPECT_NO_THROW(tikAlgImp->execute());
+    EXPECT_NO_THROW(tikAlgImpIDregu->execute());
+    
+    ASSERT_NE(getDataOnThisOutputPort(tikAlgImp, 0), getDataOnThisOutputPort(tikAlgImpIDregu, 0));
+    
+}
+
+// IDENTITY TO RESIDUAL SIZE_square_ok (should give same solution that ID)
+TEST_F(TikhonovFunctionalTest,residualRegularizationID)
+{
+    auto tikAlgImp = makeModule("SolveInverseProblemWithTikhonov");
+    auto tikAlgImpIDregu = makeModule("SolveInverseProblemWithTikhonov");
+    MatrixHandle fwdMatrix( new DenseMatrix(DenseMatrix::Identity(3,3)) );    // forward matrix (IDentityt)
+    MatrixHandle measuredData( new DenseMatrix(DenseMatrix::Random(3,1)) );   // measurement data (rand)
+    MatrixHandle residualReguMatrix( new DenseMatrix(DenseMatrix::Identity(3,3)) );
+    
+    // input data
+    stubPortNWithThisData(tikAlgImp, 0, fwdMatrix);
+    stubPortNWithThisData(tikAlgImp, 2, measuredData);
+    
+    // input data with ID regularization
+    stubPortNWithThisData(tikAlgImpIDregu, 0, fwdMatrix);
+    stubPortNWithThisData(tikAlgImpIDregu, 2, measuredData);
+    stubPortNWithThisData(tikAlgImpIDregu, 3, residualReguMatrix);
+    
+    
+    // check result
+    EXPECT_NO_THROW(tikAlgImp->execute());
+    EXPECT_NO_THROW(tikAlgImpIDregu->execute());
+    
+    ASSERT_EQ(getDataOnThisOutputPort(tikAlgImp, 0), getDataOnThisOutputPort(tikAlgImpIDregu, 0));
+    
+}
+
+// IDENTITY TO RESIDUAL SIZE_square_ok (should give same solution that ID)
+// TODO: Tikhonov without regularization matrix in the input (inside implements ID) should be different than any random matrix. If this test fails, means that residualRegularizationID is not testing what it should be testing or there is something wrong in the algorithm
+TEST_F(TikhonovFunctionalTest,residualRegularizationRAND)
+{
+    auto tikAlgImp = makeModule("SolveInverseProblemWithTikhonov");
+    auto tikAlgImpIDregu = makeModule("SolveInverseProblemWithTikhonov");
+    MatrixHandle fwdMatrix( new DenseMatrix(DenseMatrix::Identity(3,3)) );    // forward matrix (IDentityt)
+    MatrixHandle measuredData( new DenseMatrix(DenseMatrix::Random(3,1)) );   // measurement data (rand)
+    MatrixHandle residualReguMatrix( new DenseMatrix(DenseMatrix::Random(3,3)) );
+    
+    // input data
+    stubPortNWithThisData(tikAlgImp, 0, fwdMatrix);
+    stubPortNWithThisData(tikAlgImp, 2, measuredData);
+    
+    // input data with ID regularization
+    stubPortNWithThisData(tikAlgImpIDregu, 0, fwdMatrix);
+    stubPortNWithThisData(tikAlgImpIDregu, 2, measuredData);
+    stubPortNWithThisData(tikAlgImpIDregu, 3, residualReguMatrix);
+    
+    
+    // check result
+    EXPECT_NO_THROW(tikAlgImp->execute());
+    EXPECT_NO_THROW(tikAlgImpIDregu->execute());
+    
+    ASSERT_NE(getDataOnThisOutputPort(tikAlgImp, 0), getDataOnThisOutputPort(tikAlgImpIDregu, 0));
+    
+}
+
+// IDENTITY TO SOURCE size_rect_ok (should be ok)
+TEST_F(TikhonovFunctionalTest,sourceRegularizationID_recSizeOK)
+{
+    auto tikAlgImp = makeModule("SolveInverseProblemWithTikhonov");
+    auto tikAlgImpIDregu = makeModule("SolveInverseProblemWithTikhonov");
+    MatrixHandle fwdMatrix( new DenseMatrix(DenseMatrix::Identity(3,3)) );    // forward matrix (IDentityt)
+    MatrixHandle measuredData( new DenseMatrix(DenseMatrix::Random(3,1)) );   // measurement data (rand)
+    MatrixHandle sourceReguMatrix( new DenseMatrix(DenseMatrix::Identity(4,3)) );
+    
+    // input data
+    stubPortNWithThisData(tikAlgImp, 0, fwdMatrix);
+    stubPortNWithThisData(tikAlgImp, 2, measuredData);
+    
+    // input data with ID regularization
+    stubPortNWithThisData(tikAlgImpIDregu, 0, fwdMatrix);
+    stubPortNWithThisData(tikAlgImpIDregu, 1, sourceReguMatrix);
+    stubPortNWithThisData(tikAlgImpIDregu, 2, measuredData);
+    
+    
+    // check result
+    EXPECT_NO_THROW(tikAlgImp->execute());
+    EXPECT_NO_THROW(tikAlgImpIDregu->execute());
+    
+    ASSERT_EQ(getDataOnThisOutputPort(tikAlgImp, 0), getDataOnThisOutputPort(tikAlgImpIDregu, 0));
+    
+}
+
+// IDENTITY TO RESIDUAL size_rect_ok (should be ok)
+// TODO: could be a problem with the type of regularization parameter. How can I change it?
+TEST_F(TikhonovFunctionalTest,residualRegularizationID_recSizeOK)
+{
+    auto tikAlgImp = makeModule("SolveInverseProblemWithTikhonov");
+    auto tikAlgImpIDregu = makeModule("SolveInverseProblemWithTikhonov");
+    MatrixHandle fwdMatrix( new DenseMatrix(DenseMatrix::Identity(3,3)) );    // forward matrix (IDentityt)
+    MatrixHandle measuredData( new DenseMatrix(DenseMatrix::Random(3,1)) );   // measurement data (rand)
+    MatrixHandle residualReguMatrix( new DenseMatrix(DenseMatrix::Identity(4,3)) );
+    
+    // input data
+    stubPortNWithThisData(tikAlgImp, 0, fwdMatrix);
+    stubPortNWithThisData(tikAlgImp, 2, measuredData);
+    
+    // input data with ID regularization
+    stubPortNWithThisData(tikAlgImpIDregu, 0, fwdMatrix);
+    stubPortNWithThisData(tikAlgImpIDregu, 2, measuredData);
+    stubPortNWithThisData(tikAlgImpIDregu, 3, residualReguMatrix);
+    
+    
+    // check result
+    EXPECT_NO_THROW(tikAlgImp->execute());
+    EXPECT_NO_THROW(tikAlgImpIDregu->execute());
+    
+    ASSERT_EQ(getDataOnThisOutputPort(tikAlgImp, 0), getDataOnThisOutputPort(tikAlgImpIDregu, 0));
+    
+}
+
+// IDENTITY TO SOURCE size_square_ko (should complain)
+// TODO: could be a problem with the type of regularization parameter. How can I change it?
+TEST_F(TikhonovFunctionalTest,sourceRegularizationID_squareSizeKO)
+{
+    auto tikAlgImpIDregu = makeModule("SolveInverseProblemWithTikhonov");
+    MatrixHandle fwdMatrix( new DenseMatrix(DenseMatrix::Identity(3,3)) );    // forward matrix (IDentityt)
+    MatrixHandle measuredData( new DenseMatrix(DenseMatrix::Random(3,1)) );   // measurement data (rand)
+    MatrixHandle sourceReguMatrix( new DenseMatrix(DenseMatrix::Identity(4,4)) );
+    
+    // input data with ID regularization
+    stubPortNWithThisData(tikAlgImpIDregu, 0, fwdMatrix);
+    stubPortNWithThisData(tikAlgImpIDregu, 1, sourceReguMatrix);
+    stubPortNWithThisData(tikAlgImpIDregu, 2, measuredData);
+    
+    // check result
+    EXPECT_THROW(tikAlgImpIDregu->execute(),SCIRun::Core::DimensionMismatch);
+        
+}
+
+// IDENTITY TO RESIDUAL size_square_ko (should complain)
+TEST_F(TikhonovFunctionalTest,residualRegularizationID_squareSizeKO)
+{
+    auto tikAlgImpIDregu = makeModule("SolveInverseProblemWithTikhonov");
+    MatrixHandle fwdMatrix( new DenseMatrix(DenseMatrix::Identity(3,3)) );    // forward matrix (IDentityt)
+    MatrixHandle measuredData( new DenseMatrix(DenseMatrix::Random(3,1)) );   // measurement data (rand)
+    MatrixHandle residualReguMatrix( new DenseMatrix(DenseMatrix::Identity(4,4)) );
+    
+    // input data with ID regularization
+    stubPortNWithThisData(tikAlgImpIDregu, 0, fwdMatrix);
+    stubPortNWithThisData(tikAlgImpIDregu, 2, measuredData);
+    stubPortNWithThisData(tikAlgImpIDregu, 3, residualReguMatrix);
+    
+    
+    // check result
+    EXPECT_THROW(tikAlgImpIDregu->execute(),SCIRun::Core::DimensionMismatch);
+    
+}
+/*
+// RAND+ID TO SOURCE size_square_ok (should be ok)
+// TODO: don't know how to add matrices of the type MatrixHandle
+TEST_F(TikhonovFunctionalTest,sourceRegularizationIDandRAND_squareSizeOK)
+{
+    auto tikAlgImp = makeModule("SolveInverseProblemWithTikhonov");
+    auto tikAlgImpIDregu = makeModule("SolveInverseProblemWithTikhonov");
+    MatrixHandle fwdMatrix( new DenseMatrix(DenseMatrix::Identity(3,3)) );    // forward matrix (IDentityt)
+    MatrixHandle measuredData( new DenseMatrix(DenseMatrix::Random(3,1)) );   // measurement data (rand)
+    MatrixHandle idReguMatrix( new DenseMatrix(DenseMatrix::Identity(3,3)) );
+    MatrixHandle randReguMatrix( new DenseMatrix(DenseMatrix::Random(3,3)) );
+    
+    auto sourceReguMatrix = idReguMatrix.data() + *randReguMatrix;
+    
+    // input data with ID regularization
+    stubPortNWithThisData(tikAlgImpIDregu, 0, fwdMatrix);
+    stubPortNWithThisData(tikAlgImpIDregu, 1, sourceReguMatrix);
+    stubPortNWithThisData(tikAlgImpIDregu, 2, measuredData);
+    
+    
+    // check result
+    EXPECT_NO_THROW(tikAlgImpIDregu->execute());
+    
+}
+
+// RAND+ID TO RESIDUAL size_square_ok (should be ok)
+TEST_F(TikhonovFunctionalTest,residualRegularizationIDandRAND_squareSizeOK)
+{
+    auto tikAlgImp = makeModule("SolveInverseProblemWithTikhonov");
+    auto tikAlgImpIDregu = makeModule("SolveInverseProblemWithTikhonov");
+    MatrixHandle fwdMatrix( new DenseMatrix(DenseMatrix::Identity(3,3)) );    // forward matrix (IDentityt)
+    MatrixHandle measuredData( new DenseMatrix(DenseMatrix::Random(3,1)) );   // measurement data (rand)
+    MatrixHandle residualReguMatrix( new DenseMatrix(DenseMatrix::Identity(3,3)) );
+    
+    // input data with ID regularization
+    stubPortNWithThisData(tikAlgImpIDregu, 0, fwdMatrix);
+    stubPortNWithThisData(tikAlgImpIDregu, 2, measuredData);
+    stubPortNWithThisData(tikAlgImpIDregu, 3, residualReguMatrix);
+    
+    
+    // check result
+    EXPECT_NO_THROW(tikAlgImpIDregu->execute());
+    
+}
+*/
+// SOURCE REGU WITH NULL SPACE ( ? )
+// RESIDUAL REGU WITH NULL SPACE ( ? )
