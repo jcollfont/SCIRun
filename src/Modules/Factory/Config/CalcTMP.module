@@ -1,0 +1,18 @@
+{
+  "module": {
+    "name": "CalcTMP",
+    "namespace": "Forward",
+    "status": "converting",
+    "description": "TThis module computes the transmembrane parameters at a single node from given 6 parameters",
+    "header": "Modules/Legacy/Forward/CalcTMP.h"
+  },
+  "algorithm": {
+    "name": "N/A",
+    "namespace": "N/A",
+    "header": "N/A"
+  },
+  "UI": {
+    "name": "N/A",
+    "header": "N/A"
+  }
+}
